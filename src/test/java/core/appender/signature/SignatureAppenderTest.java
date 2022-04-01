@@ -1,3 +1,5 @@
+package core.appender.signature;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,7 +24,7 @@ class SignatureAppenderTest {
                         .addAttribute("pattern", "%sign %msg%n"));
 
         AppenderComponentBuilder signatureAppender = builder
-                .newAppender("signatureAppender", "SignatureAppender")
+                .newAppender("signatureAppender", "core.appender.signature.SignatureAppender")
                 .addAttribute("Appender", innerAppender);
 
         RootLoggerComponentBuilder rootLogger = builder

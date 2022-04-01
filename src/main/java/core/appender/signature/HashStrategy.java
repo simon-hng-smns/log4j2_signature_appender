@@ -1,3 +1,5 @@
+package core.appender.signature;
+
 import javax.crypto.SecretKey;
 
 public interface HashStrategy {

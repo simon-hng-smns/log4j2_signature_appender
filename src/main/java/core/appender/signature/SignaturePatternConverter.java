@@ -1,3 +1,5 @@
+package core.appender.signature;
+
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.pattern.ConverterKeys;
@@ -5,7 +7,7 @@ import org.apache.logging.log4j.core.pattern.LogEventPatternConverter;
 
 import java.util.Objects;
 
-@Plugin(name = "SignaturePatternConverter", category = "Converter")
+@Plugin(name = "core.appender.signature.SignaturePatternConverter", category = "Converter")
 @ConverterKeys({ "sign", "signature" })
 public class SignaturePatternConverter extends LogEventPatternConverter {
 

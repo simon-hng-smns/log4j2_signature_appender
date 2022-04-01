@@ -1,3 +1,5 @@
+package core.appender.signature;
+
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
@@ -16,7 +18,7 @@ import java.util.Objects;
 /**
  * Outer appender that signs each log event and delegates to an inner appender
  */
-@Plugin(name = "SignatureAppender",
+@Plugin(name = "core.appender.signature.SignatureAppender",
         category = Core.CATEGORY_NAME,
         elementType = Appender.ELEMENT_TYPE)
 public final class SignatureAppender extends AbstractAppender {
@@ -35,8 +37,8 @@ public final class SignatureAppender extends AbstractAppender {
         @Required(message = "You need to implement the SecretKeyProvider interface and supply it here")
         private SecretKeyProvider secretKeyProvider;
 
-        @PluginElement("HashStrategy")
-        @Required(message = "You need to implement the HashStrategy interface and supply it here")
+        @PluginElement("core.appender.signature.HashStrategy")
+        @Required(message = "You need to implement the core.appender.signature.HashStrategy interface and supply it here")
         private HashStrategy hashStrategy;
 
         @PluginElement("Appender")
@@ -72,7 +74,7 @@ public final class SignatureAppender extends AbstractAppender {
      * @param innerAppender     An inner appender, that must supply a pattern layout
      *                          which contains the {@link SignaturePatternConverter}
      *                          in order to append the signature.
-     * @return the SignatureAppender
+     * @return the core.appender.signature.SignatureAppender
      */
 
     protected SignatureAppender(String name,

@@ -1,3 +1,5 @@
+package core.appender.signature;
+
 import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 
 import java.nio.ByteBuffer;
