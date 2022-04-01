@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration name="TestConfig" status="WARN">
+    <Appenders>
+        <SignatureAppender name="signatureAppender">
+            <Console name="console">
+                <PatternLayout pattern="%sign%m%n"/>
+            </Console>
+
+            <SecretKeyProviderExample>
+            </SecretKeyProviderExample>
+
+            <HashStrategyExample>
+            </HashStrategyExample>
+        </SignatureAppender>
+    </Appenders>
+
+    <Loggers>
+        <Root level="error">
+            <AppenderRef ref="Out"/>
+        </Root>
+    </Loggers>
+</Configuration>
