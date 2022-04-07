@@ -3,22 +3,21 @@ package core.appender.signature;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
-import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
-import org.apache.logging.log4j.core.config.plugins.PluginElement;
+import org.apache.logging.log4j.core.config.plugins.*;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
 import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
 import org.apache.logging.log4j.core.impl.LogEventFactory;
 import org.apache.logging.log4j.core.util.SecretKeyProvider;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * Outer appender that signs each log event and delegates to an inner appender
  */
-@Plugin(name = "core.appender.signature.SignatureAppender",
+@Plugin(name = "SignatureAppender",
         category = Core.CATEGORY_NAME,
         elementType = Appender.ELEMENT_TYPE)
 public final class SignatureAppender extends AbstractAppender {
@@ -33,13 +32,13 @@ public final class SignatureAppender extends AbstractAppender {
             extends AbstractAppender.Builder<B>
             implements org.apache.logging.log4j.core.util.Builder<AbstractAppender> {
 
-        @PluginElement("SecretKeyProvider")
-        @Required(message = "You need to implement the SecretKeyProvider interface and supply it here")
-        private SecretKeyProvider secretKeyProvider;
+        @PluginBuilderAttribute("SecretKeyProvider")
+        @Required(message = "You need to implement the SecretKeyProvider interface and supply its binary name here")
+        private String secretKeyProvider;
 
-        @PluginElement("core.appender.signature.HashStrategy")
-        @Required(message = "You need to implement the core.appender.signature.HashStrategy interface and supply it here")
-        private HashStrategy hashStrategy;
+        @PluginBuilderAttribute("HashStrategy")
+        @Required(message = "You need to implement the core.appender.signature.HashStrategy interface and supply its binary name here")
+        private String hashStrategy;
 
         @PluginElement("Appender")
         @Required
@@ -48,8 +47,9 @@ public final class SignatureAppender extends AbstractAppender {
         @Override
         public AbstractAppender build() {
 
-            return new SignatureAppender(getName(), getFilter(), secretKeyProvider, hashStrategy,
-                    innerAppender);
+            return new SignatureAppender(getName(), getFilter(), innerAppender, secretKeyProvider,
+                    hashStrategy
+            );
         }
 
     }
@@ -69,20 +69,22 @@ public final class SignatureAppender extends AbstractAppender {
     private String lastHash;
 
     /**
-     * @param name              The name of the appender
-     * @param filter            The filter, if any, to use.
-     * @param secretKeyProvider {@link SecretKeyProvider} implementation.
-     * @param hashStrategy      {@link HashStrategy} implementation
-     * @param innerAppender     An inner appender, that must supply a pattern layout
-     *                          which contains the {@link SignaturePatternConverter}
-     *                          in order to append the signature.
+     * @param name                       The name of the appender
+     * @param filter                     The filter, if any, to use.
+     * @param secretKeyProviderClassName {@link ClassLoader binary name} of the {@link SecretKeyProvider} implementation.
+     * @param hashStrategyClassName      {@link ClassLoader binary name} of the {@link HashStrategy} implementation
+     * @param innerAppender              An inner appender, that must supply a pattern layout
+     *                                   which contains the {@link SignaturePatternConverter}
+     *                                   in order to append the signature.
      * @return the core.appender.signature.SignatureAppender
      */
 
     protected SignatureAppender(String name,
             Filter filter,
-            SecretKeyProvider secretKeyProvider, HashStrategy hashStrategy,
-            AbstractAppender innerAppender) {
+            AbstractAppender innerAppender,
+            String secretKeyProviderClassName,
+            String hashStrategyClassName
+    ) {
 
         /*
          * The signappender does not actually have it's own layout but uses the layout
@@ -91,13 +93,27 @@ public final class SignatureAppender extends AbstractAppender {
 
         super(name, filter, null);
 
-        this.secretKeyProvider = secretKeyProvider;
-        this.hashStrategy = hashStrategy;
         this.bufferDestination = new PseudoByteBufferDestination();
         this.logEventFactory = new DefaultLogEventFactory();
         this.innerAppender = innerAppender;
         this.layout = Objects.requireNonNull(innerAppender.getLayout(),
                 "inner appender must directly supply a layout");
+
+        this.secretKeyProvider = (SecretKeyProvider) getClassFromName(secretKeyProviderClassName);
+        this.hashStrategy = (HashStrategy) getClassFromName(hashStrategyClassName);
+    }
+
+    private Object getClassFromName(String className) {
+
+        try {
+            Class<?> clazz = getClass().getClassLoader()
+                    .loadClass(className);
+
+            return clazz.getConstructor().newInstance();
+
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
+            return new IllegalArgumentException(className + " does is not a valid argument");
+        }
     }
 
     @Override public void append(LogEvent event) {
