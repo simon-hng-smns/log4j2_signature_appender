@@ -66,6 +66,8 @@ public final class SignatureAppender extends AbstractAppender {
 
     private final Layout<? extends Serializable> layout;
 
+    private String lastHash;
+
     /**
      * @param name              The name of the appender
      * @param filter            The filter, if any, to use.
@@ -104,8 +106,15 @@ public final class SignatureAppender extends AbstractAppender {
 
         byte[] formattedEvent = bufferDestination.getData();
 
+        if (Objects.isNull(lastHash))
+            lastHash = getHashFromFile();
+
         String hash = new String(
                 hashStrategy.hash(formattedEvent, secretKeyProvider.getSecretKey()));
+        lastHash = hash;
+
+        writeHashToFile(lastHash);
+
         List<Property> hashProperty = List.of(Property.createProperty("hash", hash));
 
         LogEvent hashedEvent = logEventFactory.createEvent(
@@ -113,6 +122,15 @@ public final class SignatureAppender extends AbstractAppender {
                 event.getLevel(), event.getMessage(), hashProperty, null);
 
         innerAppender.append(hashedEvent);
+    }
+
+    private void writeHashToFile(String hash) {
+        //TODO:
+    }
+
+    private String getHashFromFile() {
+        //TODO:
+        return "";
     }
 
 }
