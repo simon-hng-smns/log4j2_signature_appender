@@ -1,14 +1,20 @@
 package core.appender.signature;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
-import org.apache.logging.log4j.core.config.plugins.*;
+import org.apache.logging.log4j.core.config.plugins.Plugin;
+import org.apache.logging.log4j.core.config.plugins.PluginBuilderAttribute;
+import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
+import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
 import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
 import org.apache.logging.log4j.core.impl.LogEventFactory;
 import org.apache.logging.log4j.core.util.SecretKeyProvider;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -36,8 +42,8 @@ public final class SignatureAppender extends AbstractAppender {
         @Required(message = "You need to implement the SecretKeyProvider interface and supply its binary name here")
         private String secretKeyProvider;
 
-        @PluginBuilderAttribute("HashStrategy")
-        @Required(message = "You need to implement the core.appender.signature.HashStrategy interface and supply its binary name here")
+        @PluginBuilderAttribute("SignStrategy")
+        @Required(message = "You need to implement the SignStrategy interface and supply its binary name here")
         private String hashStrategy;
 
         @PluginElement("Appender")
@@ -56,7 +62,7 @@ public final class SignatureAppender extends AbstractAppender {
 
     private final SecretKeyProvider secretKeyProvider;
 
-    private final HashStrategy hashStrategy;
+    private final SignStrategy signStrategy;
 
     private final AbstractAppender innerAppender;
 
@@ -66,13 +72,13 @@ public final class SignatureAppender extends AbstractAppender {
 
     private final Layout<? extends Serializable> layout;
 
-    private String lastHash;
+    private byte[] lastSignature;
 
     /**
      * @param name                       The name of the appender
      * @param filter                     The filter, if any, to use.
      * @param secretKeyProviderClassName {@link ClassLoader binary name} of the {@link SecretKeyProvider} implementation.
-     * @param hashStrategyClassName      {@link ClassLoader binary name} of the {@link HashStrategy} implementation
+     * @param hashStrategyClassName      {@link ClassLoader binary name} of the {@link SignStrategy} implementation
      * @param innerAppender              An inner appender, that must supply a pattern layout
      *                                   which contains the {@link SignaturePatternConverter}
      *                                   in order to append the signature.
@@ -100,7 +106,7 @@ public final class SignatureAppender extends AbstractAppender {
                 "inner appender must directly supply a layout");
 
         this.secretKeyProvider = (SecretKeyProvider) getClassFromName(secretKeyProviderClassName);
-        this.hashStrategy = (HashStrategy) getClassFromName(hashStrategyClassName);
+        this.signStrategy = (SignStrategy) getClassFromName(hashStrategyClassName);
     }
 
     private Object getClassFromName(String className) {
@@ -118,35 +124,47 @@ public final class SignatureAppender extends AbstractAppender {
 
     @Override public void append(LogEvent event) {
 
-        layout.encode(event, bufferDestination);
+        if (Objects.isNull(lastSignature))
+            lastSignature = getSignatureFromFile();
 
+        layout.encode(event, bufferDestination);
         byte[] formattedEvent = bufferDestination.getData();
 
-        if (Objects.isNull(lastHash))
-            lastHash = getHashFromFile();
+        ByteArrayOutputStream eventStream = new ByteArrayOutputStream();
 
-        String hash = new String(
-                hashStrategy.hash(formattedEvent, secretKeyProvider.getSecretKey()));
-        lastHash = hash;
+        // Concats last signature to the end of our formatted message
+        try {
+            eventStream.write(formattedEvent);
+            eventStream.write(lastSignature);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        writeHashToFile(lastHash);
+        byte[] signature = signStrategy
+                .sign(eventStream.toByteArray(), secretKeyProvider.getSecretKey());
+        String signatureHexString = Hex.encodeHexString(signature);
 
-        List<Property> hashProperty = List.of(Property.createProperty("hash", hash));
+        lastSignature = signature;
 
-        LogEvent hashedEvent = logEventFactory.createEvent(
+        writeSignatureToFile(lastSignature);
+
+        List<Property> signProperty = List
+                .of(Property.createProperty("signature", signatureHexString));
+
+        LogEvent signedEvent = logEventFactory.createEvent(
                 event.getLoggerName(), event.getMarker(), event.getLoggerFqcn(),
-                event.getLevel(), event.getMessage(), hashProperty, null);
+                event.getLevel(), event.getMessage(), signProperty, null);
 
-        innerAppender.append(hashedEvent);
+        innerAppender.append(signedEvent);
     }
 
-    private void writeHashToFile(String hash) {
+    private void writeSignatureToFile(byte[] hash) {
         //TODO:
     }
 
-    private String getHashFromFile() {
+    private byte[] getSignatureFromFile() {
         //TODO:
-        return "";
+        return "".getBytes();
     }
 
 }

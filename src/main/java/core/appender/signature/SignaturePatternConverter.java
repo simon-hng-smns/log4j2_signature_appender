@@ -23,9 +23,9 @@ public class SignaturePatternConverter extends LogEventPatternConverter {
 
     @Override public void format(LogEvent event, StringBuilder toAppendTo) {
 
-        String hash = event.getContextData().getValue("hash");
+        String hash = event.getContextData().getValue("signature");
         if (Objects.nonNull(hash)) {
-            toAppendTo.append((String) event.getContextData().getValue("hash"));
+            toAppendTo.append(hash);
         }
     }
 }

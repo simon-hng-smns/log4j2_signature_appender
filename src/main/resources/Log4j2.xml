@@ -3,7 +3,8 @@
     <Appenders>
         <SignatureAppender name="signatureAppender"
                            secretKeyProvider="example.SecretKeyProviderExample"
-                           hashStrategy="example.HashStrategyExample">
+                           signStrategy="example.SignStrategyExample"
+        >
 
             <Console name="console">
                 <PatternLayout pattern="[%sign] %m%n"/>

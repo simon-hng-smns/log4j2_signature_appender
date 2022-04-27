@@ -2,7 +2,7 @@ package core.appender.signature;
 
 import javax.crypto.SecretKey;
 
-public interface HashStrategy {
+public interface SignStrategy {
 
     /**
      * @param data      a byte array of the data to be signed
@@ -10,5 +10,5 @@ public interface HashStrategy {
      *                  {@link org.apache.logging.log4j.core.util.SecretKeyProvider}
      * @return The hashed byte array
      */
-    byte[] hash(byte[] data, SecretKey secretKey);
+    byte[] sign(byte[] data, SecretKey secretKey);
 }

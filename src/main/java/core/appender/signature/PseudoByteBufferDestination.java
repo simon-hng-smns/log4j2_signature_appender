@@ -20,7 +20,8 @@ public class PseudoByteBufferDestination implements ByteBufferDestination {
 
     @Override public void writeBytes(ByteBuffer data) {
 
-        this.data = data.array();
+        this.data = new byte[data.remaining()];
+        data.get(this.data);
     }
 
     @Override public void writeBytes(byte[] data, int offset, int length) {
