@@ -1,14 +1,12 @@
 package core.appender.signature;
 
-import javax.crypto.SecretKey;
+import java.security.PrivateKey;
 
 public interface SignStrategy {
 
     /**
-     * @param data      a byte array of the data to be signed
-     * @param secretKey a secret key. Preferably provided by a
-     *                  {@link org.apache.logging.log4j.core.util.SecretKeyProvider}
+     * @param data a byte array of the data to be signed
      * @return The hashed byte array
      */
-    byte[] sign(byte[] data, SecretKey secretKey);
+    byte[] sign(byte[] data);
 }

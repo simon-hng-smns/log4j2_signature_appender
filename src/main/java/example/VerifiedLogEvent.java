@@ -5,8 +5,7 @@ import org.apache.commons.codec.binary.Hex;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.security.Key;
-import java.util.Arrays;
+import java.security.*;
 
 public class VerifiedLogEvent {
 
@@ -66,23 +65,33 @@ public class VerifiedLogEvent {
         return signature;
     }
 
-    public void verify(Key key) {
+    public void verify(PublicKey publicKey) {
 
-        SignStrategyExample signStrategy = new SignStrategyExample();
-
-        byte[] decryptedSignature = signStrategy.decryptSignature(signature, key);
-
-        ByteArrayOutputStream msgStream = new ByteArrayOutputStream();
         try {
-            msgStream.write(message);
-            msgStream.write(lastSignature);
-        } catch (IOException e) {
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initVerify(publicKey);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+            // Concats last signature to the end of our formatted message
+            try {
+                outputStream.write(message);
+                outputStream.write(lastSignature);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            signature.update(outputStream.toByteArray());
+
+            this.verified = signature.verify(this.signature);
+
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (SignatureException e) {
             e.printStackTrace();
         }
-
-        byte[] msgHash = signStrategy.getHash(msgStream.toByteArray());
-
-        this.verified = Arrays.equals(decryptedSignature, msgHash);
     }
 
     @Override public String toString() {

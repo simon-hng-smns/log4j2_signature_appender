@@ -2,8 +2,9 @@
 <Configuration name="TestConfig" status="WARN" packages="core.appender.signature, example">
     <Appenders>
         <SignatureAppender name="signatureAppender"
-                           secretKeyProvider="example.SecretKeyProviderExample"
-                           signStrategy="example.SignStrategyExample"
+                           signatureAlgorithm="SHA256withRSA"
+                           pathToKeyStore="signatureKeyStore.p12"
+                           keyStorePassword="password"
         >
 
             <Console name="console">

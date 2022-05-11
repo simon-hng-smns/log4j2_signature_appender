@@ -16,7 +16,6 @@ import org.apache.logging.log4j.core.util.SecretKeyProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Objects;
 
@@ -38,13 +37,14 @@ public final class SignatureAppender extends AbstractAppender {
             extends AbstractAppender.Builder<B>
             implements org.apache.logging.log4j.core.util.Builder<AbstractAppender> {
 
-        @PluginBuilderAttribute("SecretKeyProvider")
-        @Required(message = "You need to implement the SecretKeyProvider interface and supply its binary name here")
-        private String secretKeyProvider;
+        @PluginBuilderAttribute("signatureAlgorithm")
+        private String signatureAlgorithm;
 
-        @PluginBuilderAttribute("SignStrategy")
-        @Required(message = "You need to implement the SignStrategy interface and supply its binary name here")
-        private String hashStrategy;
+        @PluginBuilderAttribute("pathToKeyStore")
+        private String pathToKeyStore;
+
+        @PluginBuilderAttribute("keyStorePassword")
+        private String keyStorePassword;
 
         @PluginElement("Appender")
         @Required
@@ -53,14 +53,11 @@ public final class SignatureAppender extends AbstractAppender {
         @Override
         public AbstractAppender build() {
 
-            return new SignatureAppender(getName(), getFilter(), innerAppender, secretKeyProvider,
-                    hashStrategy
-            );
+            return new SignatureAppender(getName(), getFilter(), innerAppender, signatureAlgorithm,
+                    pathToKeyStore, keyStorePassword);
         }
 
     }
-
-    private final SecretKeyProvider secretKeyProvider;
 
     private final SignStrategy signStrategy;
 
@@ -88,8 +85,9 @@ public final class SignatureAppender extends AbstractAppender {
     protected SignatureAppender(String name,
             Filter filter,
             AbstractAppender innerAppender,
-            String secretKeyProviderClassName,
-            String hashStrategyClassName
+            String signatureAlgorithm,
+            String pathToKeyStore,
+            String keyStorePassword
     ) {
 
         /*
@@ -105,21 +103,10 @@ public final class SignatureAppender extends AbstractAppender {
         this.layout = Objects.requireNonNull(innerAppender.getLayout(),
                 "inner appender must directly supply a layout");
 
-        this.secretKeyProvider = (SecretKeyProvider) getClassFromName(secretKeyProviderClassName);
-        this.signStrategy = (SignStrategy) getClassFromName(hashStrategyClassName);
-    }
-
-    private Object getClassFromName(String className) {
-
-        try {
-            Class<?> clazz = getClass().getClassLoader()
-                    .loadClass(className);
-
-            return clazz.getConstructor().newInstance();
-
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
-            return new IllegalArgumentException(className + " does is not a valid argument");
-        }
+        KeyStoreStrategy keyStoreStrategy = new KeyStoreStrategyImpl(pathToKeyStore,
+                keyStorePassword);
+        this.signStrategy = new SignStrategyImpl(signatureAlgorithm,
+                keyStoreStrategy.getPrivateKey());
     }
 
     @Override public void append(LogEvent event) {
@@ -141,7 +128,7 @@ public final class SignatureAppender extends AbstractAppender {
         }
 
         byte[] signature = signStrategy
-                .sign(eventStream.toByteArray(), secretKeyProvider.getSecretKey());
+                .sign(eventStream.toByteArray());
         String signatureHexString = Hex.encodeHexString(signature);
 
         lastSignature = signature;
