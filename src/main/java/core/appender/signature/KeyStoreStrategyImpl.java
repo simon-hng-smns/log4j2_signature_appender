@@ -1,13 +1,13 @@
 package core.appender.signature;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.CertificateException;
+import java.util.Objects;
 
 public class KeyStoreStrategyImpl implements KeyStoreStrategy {
 
@@ -23,13 +23,12 @@ public class KeyStoreStrategyImpl implements KeyStoreStrategy {
             keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
             URL resource = getClass().getClassLoader().getResource(path);
             keyStore.load(new FileInputStream(
-                    Paths.get(resource.toURI()).toFile()
+                    Paths.get(Objects.requireNonNull(resource).toURI()).toFile()
             ), password.toCharArray());
-        } catch (KeyStoreException e) {
+        } catch (KeyStoreException | NoSuchAlgorithmException e) {
             throw new UnsupportedOperationException(e);
-        } catch (NoSuchAlgorithmException | IOException | CertificateException | URISyntaxException e) {
-            // TODO
-            throw new RuntimeException(e);
+        } catch (IOException | CertificateException | URISyntaxException e) {
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -37,9 +36,10 @@ public class KeyStoreStrategyImpl implements KeyStoreStrategy {
 
         try {
             return (PrivateKey) keyStore.getKey("signatureKeyPair", password.toCharArray());
-        } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-            // TODO: better exception handling
-            throw new RuntimeException(e);
+        } catch (KeyStoreException | NoSuchAlgorithmException e) {
+            throw new UnsupportedOperationException(e);
+        } catch (UnrecoverableKeyException e) {
+            throw new IllegalArgumentException(e);
         }
     }
 }
