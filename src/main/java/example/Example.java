@@ -12,11 +12,12 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class Example {
 
-    public static void main(String[] args) {
+    private static String writeLogs() {
 
         PrintStream prevConsole = System.out;
 
@@ -28,35 +29,49 @@ public class Example {
         logger.info("second log");
         logger.info("third log");
 
-        List<VerifiedLogEvent> logEvents = Arrays
-                .stream(console.toString().split("((?<=(\\r\\n)))"))
-                .map(VerifiedLogEvent::createVerifiedLogEvent)
-                .collect(Collectors.toList());
+        System.setOut(prevConsole);
+        return console.toString();
+    }
 
-        PublicKey publicKey = getPublicKey("receiverKeystore.p12", "password");
+    private static boolean verifyLogs(String input) {
+
+        List<LogEventVerifier> logEvents = Arrays
+                .stream(input.split("((?<=(\\r\\n)))"))
+                .map(LogEventVerifier::createLogEventVerifier)
+                .collect(Collectors.toList());
 
         for (int i = 0; i < logEvents.size(); i++) {
             byte[] lastSignature = i == 0 ? new byte[0] : logEvents.get(i - 1).getSignature();
-            VerifiedLogEvent currentLogEvent = logEvents.get(i);
+            LogEventVerifier currentLogEvent = logEvents.get(i);
 
             currentLogEvent.setLastSignature(lastSignature);
-            currentLogEvent.verify(publicKey);
         }
 
-        System.setOut(prevConsole);
+        PublicKey publicKey = getPublicKey();
+        logEvents.forEach(event -> event.verify(publicKey));
 
-        logEvents.forEach(System.out::println);
+        return logEvents.stream().map(e -> e.verified)
+                .reduce(true, (a, b) -> a && b);
     }
 
-    private static PublicKey getPublicKey(String path, String password) {
+    public static void main(String[] args) {
+
+        String consoleInput = writeLogs();
+
+        boolean logsVerified = verifyLogs(consoleInput);
+
+        System.out.println(logsVerified ? "Successfully verified logs" : "Failed to verify logs");
+    }
+
+    private static PublicKey getPublicKey() {
 
         try {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            URL resource = Example.class.getClassLoader().getResource(path);
+            URL resource = Example.class.getClassLoader().getResource("receiverKeystore.p12");
 
             keyStore.load(new FileInputStream(
-                    Paths.get(resource.toURI()).toFile()
-            ), password.toCharArray());
+                    Paths.get(Objects.requireNonNull(resource).toURI()).toFile()
+            ), "password".toCharArray());
 
             Certificate certificate = keyStore.getCertificate("signatureKeyPair");
             return certificate.getPublicKey();

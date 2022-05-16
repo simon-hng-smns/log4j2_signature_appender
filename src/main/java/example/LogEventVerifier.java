@@ -7,7 +7,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.*;
 
-public class VerifiedLogEvent {
+public class LogEventVerifier {
 
     boolean verified = false;
 
@@ -17,7 +17,7 @@ public class VerifiedLogEvent {
 
     byte[] message;
 
-    VerifiedLogEvent(byte[] lastSignature, byte[] signature, byte[] message) {
+    LogEventVerifier(byte[] lastSignature, byte[] signature, byte[] message) {
 
         this.lastSignature = lastSignature;
         this.signature = signature;
@@ -36,7 +36,7 @@ public class VerifiedLogEvent {
      * @returns A pair of type [byte[], byte[]]
      */
 
-    public static VerifiedLogEvent createVerifiedLogEvent(String log) {
+    public static LogEventVerifier createLogEventVerifier(String log) {
 
         String signature = log;
         signature = signature
@@ -52,12 +52,7 @@ public class VerifiedLogEvent {
 
         byte[] messageBytes = log.replace(signature, "").getBytes();
 
-        return createVerifiedLogEvent(signatureBytes, messageBytes);
-    }
-
-    public static VerifiedLogEvent createVerifiedLogEvent(byte[] signature, byte[] message) {
-
-        return new VerifiedLogEvent(null, signature, message);
+        return new LogEventVerifier(null, signatureBytes, messageBytes);
     }
 
     public byte[] getSignature() {
@@ -86,17 +81,17 @@ public class VerifiedLogEvent {
             this.verified = signature.verify(this.signature);
 
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         } catch (InvalidKeyException e) {
-            e.printStackTrace();
+            throw new IllegalArgumentException(e);
         } catch (SignatureException e) {
-            e.printStackTrace();
+            throw new UnsupportedOperationException(e);
         }
     }
 
     @Override public String toString() {
 
-        return "VerifiedLogEvent{\n" +
+        return "LogEventVerifier{\n" +
                 "\tverified\t\t" + verified + "\n" +
                 "\tlastSignature\t" + Hex.encodeHexString(lastSignature) + "\n" +
                 "\tsignature\t\t" + Hex.encodeHexString(signature) + "\n" +
